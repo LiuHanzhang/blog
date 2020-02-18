@@ -52,25 +52,6 @@ $ gcc -c hello.c -o hello.o
 $ gcc hello.o main.o -o main
 ```
 
-### 不规范方式
-
-在IDE环境下，默认对`main.c`进行编译。这时可以在`main.c`中`#include"xx.c"`
-
-```c
-//main.c
-#include"hello.h"
-#include"hello.c"
-
-int main()
-{
-    hello();
-    return 0;
-}
-```
-
-```shell
-$ gcc main.c -o main
-```
 
 # Lecture 1: Intro
 
