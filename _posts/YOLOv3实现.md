@@ -306,7 +306,7 @@ prediction = (#(N, C, H, W) -> (N, #anchors, 5+#classes, H, W)
 )
 
 #Get outputs
-#x, y, w, h of shape [N, #anchors, H, W]
+#x, y, w, h ,pred_conf of shape [N, #anchors, H, W]
 x = torch.sigmoid(prediction[..., 0])   #center x
 y = torch.sigmoid(prediction[..., 1])   #center y
 w = prediction[..., 2]  #width
@@ -320,12 +320,22 @@ if grid_size != self.grid_size:
     self.compute_grid_offsets(grid_size, cuda=x.is_cuda)
 
 #Add offset and scale with anchors
+#pred_boxes of shape (N, #anchors, H, W, 4)
 pred_boxes = FloatTensor(prediction[..., :4].shape)
 pred_boxes[..., 0] = x.data + self.grid_x
 pred_boxes[..., 1] = y.data + self.grid_y
 pred_boxes[..., 2] = torch.exp(w.data) * self.anchor_w
 pred_boxes[..., 3] = torch.exp(h.data) * self.anchor_h
 
+#output of shape (N, #anchors*H*W, 5+#classes)
+output = torch.cat(
+    (
+        pred_boxes.view(num_samples, -1, 4) * self.stride,  #N, #anchors*H*W, 4
+        pred_conf.view(num_samples, -1, 1),                 #N, #anchors*H*W, 1
+        pred_cls.view(num_samples, -1, self.num_classes),   #N, #anchors*H*W, #classes
+    ),
+    -1,
+)
 ```
 
 其中，`Add offset and scale with anchors`部分的公式参见[这里](../YOLO/#Direct-location-prediction)。公式中的$c_x,c _y$，也就是`self.grid_x, self.grid_y`是如何计算的呢？
@@ -513,15 +523,65 @@ class Darknet(nn.Module):
                 #TODO:What about the activation???
             elif block["type"] == "yolo":
                 img_dim = x.shape[2]
-                x, layer_loss = self.module_list[index][0](x, targets, img_dim)
+                x, layer_loss = self.module_list[index][0](x, targets, img_dim) #x of shape (N, #anchors*H*W, 5+#classes)
                 loss += layer_loss
                 yolo_outputs.append(x)
                 outputs[str(index)] = x
-        yolo_outputs = to_cpu(torch.cat(yolo_outputs, 1))
+        yolo_outputs = to_cpu(torch.cat(yolo_outputs, 1))   #yolo_outputs of shape (N, #feature_maps*#anchors*H*W, 5+#classes)
         return yolo_outputs if targets is None else (loss, yolo_outputs)
 ```
 
 还记得我们为`shortcut`层和`route`层创建的`EmptyLayer`吗？它们的功能直接写在`Darknet`的`forward`函数中了。
+
+# 检测
+
+## 非极大值抑制
+
+选取一个置信度阈值，过滤掉低阈值box，再经过NMS（非极大值抑制），就可以输出整个网络的预测结果了。
+
+```python
+def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4):
+    """
+    Removes detections with lower object confidence score than 'conf_thres' and performs
+    Non-Maximum Suppression to further filter detections.
+    Returns detections with shape:
+        (x1, y1, x2, y2, object_conf, class_score, class_pred)
+    """
+
+    #predictions of shape (N, #feature_maps*#anchors*H*W, 5+#classes)
+
+    # From (center x, center y, width, height) to (x1, y1, x2, y2)
+    prediction[..., :4] = xywh2xyxy(prediction[..., :4])
+    output = [None for _ in range(len(prediction))]
+    for image_i, image_pred in enumerate(prediction):   #image_pred of shape (#feature_maps*#anchors*H*W, 5+#classes)
+        # Filter out confidence scores below threshold
+        image_pred = image_pred[image_pred[:, 4] >= conf_thres] #shape (#conf>thres, 5+#classes)
+        # If none are remaining => process next image
+        if not image_pred.size(0):
+            continue
+        # Object confidence times class confidence
+        score = image_pred[:, 4] * image_pred[:, 5:].max(1)[0]
+        # Sort by it
+        image_pred = image_pred[(-score).argsort()]
+        class_confs, class_preds = image_pred[:, 5:].max(1, keepdim=True)
+        detections = torch.cat((image_pred[:, :5], class_confs.float(), class_preds.float()), 1)
+        # Perform non-maximum suppression
+        keep_boxes = []
+        while detections.size(0):
+            large_overlap = bbox_iou(detections[0, :4].unsqueeze(0), detections[:, :4]) > nms_thres
+            label_match = detections[0, -1] == detections[:, -1]
+            # Indices of boxes with lower confidence scores, large IOUs and matching labels
+            invalid = large_overlap & label_match #同类，且IoU大于阈值
+            weights = detections[invalid, 4:5]
+            # Merge overlapping bboxes by order of confidence TODO:为什么是merge？而不是保留conf最大的那一个
+            detections[0, :4] = (weights * detections[invalid, :4]).sum(0) / weights.sum()
+            keep_boxes += [detections[0]]
+            detections = detections[~invalid]
+        if keep_boxes:
+            output[image_i] = torch.stack(keep_boxes)
+
+    return output
+```
 
 注：本篇笔记参考、摘录了如下资料
 
