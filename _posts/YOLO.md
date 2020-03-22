@@ -25,7 +25,7 @@ activation=leaky
 本地连接层(locally connected laeyer)可以看作没有权重共享的卷积层。在卷积层中我们对每个位置都点乘了相同的filter，本地连接层对每个位置点乘不同的filter(即不共享权重)。比如输入维度是$7\times 7\times 1024$，如果是卷积层，输出维度应为
 
 $$
-{\rm output\_dim}=\frac{ {\rm input\_dim}+2\times{\rm pad}-{\rm kernel\_size} } { {\rm stride} }+1
+{\rm output\\_dim}=\frac{ {\rm input\\_dim}+2\times{\rm pad}-{\rm kernel\\_size} } { {\rm stride} }+1
 = 7
 $$
 
