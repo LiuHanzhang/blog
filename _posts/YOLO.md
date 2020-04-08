@@ -216,7 +216,7 @@ rescore=1
 ...
 ```
 
-YOLOv2 Input尺寸是$416\times 416$，downscaling 5次(缩小1/32)，所以最后输出是一个$13\times 13\times ( (5+{\rm \\#classes} )\times {\rm \\#anchors}) = 3\times 13\times ( (5+20)\times 5)= 13\times 13\times 125$(输出通道数等于最后一个卷积层的filter数量125)。注意YOLOv2的输出是$S\times S\times [B\times (5+C)]$，而YOLOv1的输出是$S\times S\times [B\times 5+C]$
+YOLOv2 Input尺寸是$416\times 416$，downscaling 5次(缩小1/32)，所以最后输出是一个$13\times 13\times ( (5+{\rm \\#classes} )\times {\rm \\#anchors}) = 13\times 13\times ( (5+20)\times 5)= 13\times 13\times 125$(输出通道数等于最后一个卷积层的filter数量125)。注意YOLOv2的输出是$S\times S\times [B\times (5+C)]$，而YOLOv1的输出是$S\times S\times [B\times 5+C]$
 
 # YOLOv3
 
