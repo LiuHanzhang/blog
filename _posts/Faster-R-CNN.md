@@ -3,6 +3,7 @@ title: Faster R-CNN
 date: 2020-03-26 11:43:12
 tags:
 categories: Notebook
+mathjax: true
 ---
 
 # Image Pre-Processing

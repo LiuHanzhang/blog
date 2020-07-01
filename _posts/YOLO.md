@@ -3,6 +3,7 @@ title: YOLO
 date: 2020-03-20 20:40:44
 tags:
 categories: Notebook
+mathjax: true
 ---
 
 # YOLOv1

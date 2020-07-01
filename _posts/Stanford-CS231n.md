@@ -3,6 +3,7 @@ title: Stanford CS231n
 date: 2020-02-06 16:12:56
 tags:
 categories: Notebook
+mathjax: true
 ---
 
 # Lecture 2: Linear classification

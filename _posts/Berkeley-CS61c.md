@@ -3,6 +3,7 @@ title: Berkeley CS61c
 date: 2020-02-07 11:19:10
 tags:
 categories: Notebook
+mathjax: true
 ---
 
 # C语言笔记
