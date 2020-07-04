@@ -221,7 +221,7 @@ $$
 到
 
 $$
-\pm 1.111\ 111\ 111\ 111\ 111\ 111\ 111\ 11_2 \times 2^{254-126}\approx 2^{128}\approx3.403 \times 10^{38}
+\pm 1.111\ 111\ 111\ 111\ 111\ 111\ 111\ 11_2 \times 2^{254-127}\approx 2^{128}\approx3.403 \times 10^{38}
 $$
 
 # RISC-V vs MIPS
@@ -236,6 +236,42 @@ $$
 
 https://www.zhihu.com/question/28368960/answer/699535096
 
+# Lecture 23: Instruction Level Parallelism
+
+##  Increasing Processor Performance
+
+1. **Clock rate**
+
+- Limited by technology and power dissipation
+
+2. **Pipelining**
+
+- “Overlap” instruction execution
+-  Deeper pipeline: 5 => 10 => 15 stages
+  - Less work per stage ! shorter clock cycle
+  - But more potential for hazards (CPI > 1)
+
+3. **Multiple Issue（多发射）**
+
+## Multiple Issue
+
+### Static Multiple Issue
+
+Static multiple-issue processors all use the compiler to assist with packaging instructions and handling hazards.
+
+Most static issue processors also rely on the compiler to take on some responsibility for handling data and control hazards. The compiler’s responsibilities may include static branch prediction and code scheduling to reduce or prevent all hazards.
+
+Static Multiple Issue's original name: <span style="background-color:#FFFF00;">Very Long Instruction Word (VLIW).</span>
+
+### Dynamic Multiple Issue (Superscalar)
+
+In the simplest superscalar processors, instructions issue in order, and the processor decides whether zero, one, or more instructions can issue in a given clock cycle. Obviously, achieving good performance on such a processor still requires the compiler to try to schedule instructions to move dependences apart and thereby improve the instruction issue rate. Even with such compiler scheduling, <span style="background-color:#FFFF00;">there is an important difference between this simple superscalar and a VLIW processor</span>: the code, whether scheduled or not, is guaranteed by the hardware to execute correctly. Furthermore, compiled code will always run correctly independent of the issue rate or pipeline structure of the processor. In some VLIW designs, this has not been the case, and recompilation was required when moving across different processor models; in other static issue processors, code would run correctly across different implementations, but often so poorly as to make compilation effectively required.
+
+#### Superscalar = Multicore?
+
+- A superscalar processor is a CPU that implements a form of parallelism called instruction-level parallelism within a single processor. In contrast to a scalar processor that can execute at most one single instruction per clock cycle, a superscalar processor can execute more than one instruction during a clock cycle by simultaneously dispatching multiple instructions to different execution units on the processor. It therefore allows for more throughput (the number of instructions that can be executed in a unit of time) than would otherwise be possible at a given clock rate. <span style="background-color:#FFFF00;">Each execution unit is not a separate processor (or a core if the processor is a multi-core processor), but an execution resource within a single CPU such as an arithmetic logic unit.</span>
+- In Flynn's taxonomy, <span style="background-color:#FFFF00;">a single-core superscalar processor is classified as an SISD processor (Single Instruction stream, Single Data stream)</span>, though many superscalar processors support short vector operations and so could be classified as SIMD (Single Instruction stream, Multiple Data streams). A multicore superscalar processor is classified as an MIMD processor (Multiple Instruction streams, Multiple Data streams).
+
 # Lecture 24: Cache
 
 ## Typical Memory Hierarchy
@@ -246,8 +282,7 @@ https://www.zhihu.com/question/28368960/answer/699535096
 
 Cache contains copies of data in memory that are being used.
 
-Memory contains copies of data on disk that are
-being used.
+Memory contains copies of data on disk that are being used.
 
 Caches work on the principles of temporal and spatial locality:
 
@@ -290,6 +325,49 @@ Larger Block Size:
 
 {% asset_img image-20200130173825687.png %}
 
+## Direct-Mapped Cache
+
+### Terminology
+
+<img src="image-20200704111640478.png" alt="image-20200704111640478" style="zoom: 25%;" />
+
+**Index**
+
+Specifies the cache index (which “row”/block of the cache we should look in)
+
+**Offset**
+
+Once we’ve found correct block, specifies which byte within the block we want
+
+**Tag**
+
+The remaining bits after offset and index are determined; these are used to distinguish between all the memory addresses that map to the same location
+
+### Example
+
+Suppose we have a 8byte of data in a direct-mapped cache with 2 byte blocks, determine the size of the tag, index and offset fields if we’re using a 32-bit architecture.
+
+**Offset**
+
+- need to specify correct byte within a block
+- block contains 2 bytes = $2^1$ bytes => need 1 bit to specify correct byte
+
+**Index: (~index into an “array of blocks”)**
+
+- need to specify correct block in cache
+- cache contains 8 B = $2^3$bytes
+- block contains 2 B = $2^1$bytes
+- \# blocks/cache = $\frac{\text{bytes/cache}}{\text{bytes/block}} = \frac{2^3 \text{bytes/cache}}{2^1 \text{bytes/block}}= 2^2$ \# blocks/cache
+- need 2 bits to specify this many blocks
+
+**Tag: use remaining bits as tag**
+
+- tag length = addr length – offset - index  = 32 - 1 - 2 bits = 29 bits
+
+- so tag is leftmost 29 bits of memory address
+
+- Tag can be thought of as “cache number”
+
 ## Optimize Goal
 
 Minimize: Average Memory Access Time
@@ -300,18 +378,18 @@ Minimize: Average Memory Access Time
 
 ## Hit and Miss Policies
 
-The [Venus](https://venus.cs61c.org) cache simulator currently simulates a **write-through, write-allocate** cache. Here’s a reminder about the three different cache hit policies you should know about:
+The [Venus](https://venus.cs61c.org) cache simulator currently simulates a **write-through, write-allocate** cache. Here’s a reminder about the three different cache <span style="background-color:#FFFF00;">hit policies</span> you should know about:
 
 - **Write-back** means that on a write hit, data is written to the cache only, and when this write happens, the dirty bit for the block that was written becomes 1. Writing to the cache is fast, so write latency in write-back caches is usually quite small. However, when a block is evicted from a write-back cache, if the dirty bit is 1, memory must be updated with the contents of that block, as it contains changes that are not yet reflected in memory. This makes write-back caches more difficult to implement in hardware.
 - **Write-through** means that on a write hit, data is written to both the cache and main memory. Writing to the cache is fast, but writing to main memory is slow; this makes write latency in write-through caches slower than in a write-back cache. However, write-through caches mean simpler hardware, since we can assume in write-through caches that memory always has the most up-to-date data.
 - **Write-around** means that in every situation, data is written to main memory only; if we have the block we’re writing in the cache, the valid bit of the block is changed to invalid. Essentially, there is no such thing as a write hit in a write-around cache; a write “hit” does the same thing as a write miss.
 
-There are also two miss policies you should know about:
+There are also two <span style="background-color:#FFFF00;">miss policies</span> you should know about:
 
 - **Write-allocate** means that on a write miss, you pull the block you missed on into the cache. For write-back, write-allocate caches, this can mean that memory is never written to directly; instead, writes are always to the cache and memory is updated upon eviction.
 - **No write-allocate** means that on a write miss, you do not pull the block you missed on into the cache. Only memory is updated.
 
-Additionally, in this course, we talk about several replacement policies, in order from most useful to least useful (normally):
+Additionally, in this course, we talk about several <span style="background-color:#FFFF00;">replacement policies</span>, in order from most useful to least useful (normally):
 
 - **LRU** - Least recently used, when we decide to evict a cache block to make space, we select the block that has been used farthest back in time of all the other blocks.
 - **Random** - When we decide to evict a cache block to make space, we randomly select one of the blocks in the cache to evict.
