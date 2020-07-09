@@ -409,6 +409,8 @@ Common question(s):
 
 <span style="background-color:#FFFF00;">VM系统和Cache系统在地址表示方式上的区别：后者是通过引入Cache提高DRAM的访问速度，因此地址是用的是低一级存储DRAM的地址；而前者是通过辅助存储器增大DRAM的容量（目的之一），因此地址用的是高一级存储DRAM的地址。（不是很确定）</span>
 
+虚拟存储器实际上相当于全相联cache+页表。
+
 ## Virtual vs. Physical Address
 
 {% asset_img image-20200201110733386.png %}
