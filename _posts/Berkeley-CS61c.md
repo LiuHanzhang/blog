@@ -548,7 +548,7 @@ See *[Computer Organization and Design](https://booksite.elsevier.com/9780124077
 
 {% asset_img 指令级并行.svg %}
 
->In Flynn's taxonomy, ==a single-core superscalar processor is classified as an SISD processor (Single Instruction stream, Single Data stream)==, though many superscalar processors support short vector operations and so could be classified as SIMD (Single Instruction stream, Multiple Data streams). A multicore superscalar processor is classified as an MIMD processor (Multiple Instruction streams, Multiple Data streams).
+>In Flynn's taxonomy, <span style="background-color:#FFFF00;">a single-core superscalar processor is classified as an SISD processor (Single Instruction stream, Single Data stream)</span>, though many superscalar processors support short vector operations and so could be classified as SIMD (Single Instruction stream, Multiple Data streams). A multicore superscalar processor is classified as an MIMD processor (Multiple Instruction streams, Multiple Data streams).
 >
 >https://en.wikipedia.org/wiki/Superscalar_processor
 
